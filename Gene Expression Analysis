@@ -1,22 +1,152 @@
+library(WriteXLS) 
 
-#install.packages("proxyC")
+Data=read.csv("Natoli_paper_gene_exp_common_genes_ifn_il4_tnf_tgf_il1b_malp2_cpg.tsv",sep="\t")
+
+expresListifng=list() #creat list for every gene
+expresListil4=list()
+expresListtnfa=list()
+expresListtgfb=list()
+expresListil1b=list()
+expresListmalp2=list()
+expresListcpg=list()
+count=0 
+count1=0
+count2=0
+count3=0
+count4=0
+count5=0
+count6=0
+t=nrow(Data) 
+  if(abs(Data$log_fold_change_ifng[i])>=1 && (Data$p_value_ifng[i]<=0.05)){
+    count=count + 1
+#set pvalue restrictions   
+    expresListifng[count]<-list(Data$gene[i])
+  }
+  if(abs(Data$log_fold_change_il4[i])>=1 && (Data$p_value_il4[i]<=0.05)){
+    count1=count1 + 1
+ 
+    expresListil4[count1]<-list(Data$gene[i])
+  } 
+  if(abs(Data$log_fold_change_tnfa[i])>=1 && (Data$p_value_tnfa[i]<=0.05)){
+    count2=count2 + 1
+    
+    expresListtnfa[count2]<-list(Data$gene[i])
+  }
+  if(abs(Data$log_fold_change_tgfb[i])>=1 && (Data$p_value_tgfb[i]<=0.05)){
+    count3=count3 + 1
+    
+    expresListtgfb[count3]<-list(Data$gene[i])
+  }
+  if(abs(Data$log_fold_change_il1b[i])>=1 && (Data$p_value_il1b[i]<=0.05)){
+    count4=count4 + 1
+    
+    expresListil1b[count4]<-list(Data$gene[i])
+  }
+  if(abs(Data$log_fold_change_malp2[i])>=1 && (Data$p_value_malp2[i]<=0.05)){
+    count5=count5 + 1
+    
+    expresListmalp2[count5]<-list(Data$gene[i])
+  } 
+  if(abs(Data$log_fold_change_cpg[i])>=1 && (Data$p_value_cpg[i]<=0.05)){
+    count6=count6 + 1
+    
+    expresListcpg[count6]<-list(Data$gene[i])
+  }
+}  
 
 
+
+#compare
+jaccard <- function(a, b) {
+  intersection = length(intersect(a, b))
+  union = length(a) + length(b) - intersection
+  return (intersection/union)
+}
+
+genes=!is.na(genes) 
+genes=data.frame(matrix(nrow=7,ncol=7))
+
+#create matrix
+genes[1,1]=jaccard(expresListifng,expresListifng)
+genes[1,2]=jaccard(expresListifng, expresListil4)
+genes[1,3]=jaccard(expresListifng,expresListtnfa)
+genes[1,4]=jaccard(expresListifng,expresListtgfb)
+genes[1,5]=jaccard(expresListifng,expresListil1b)
+genes[1,6]=jaccard(expresListifng,expresListmalp2)
+genes[1,7]=jaccard(expresListifng,expresListcpg)
+ 
+genes[2,1]=jaccard(expresListil4,expresListifng)
+genes[2,2]=jaccard(expresListil4, expresListil4)
+genes[2,3]=jaccard(expresListil4,expresListtnfa)
+genes[2,4]=jaccard(expresListil4,expresListtgfb)
+genes[2,5]=jaccard(expresListil4,expresListil1b)
+genes[2,6]=jaccard(expresListil4,expresListmalp2)
+genes[2,7]=jaccard(expresListil4,expresListcpg)
+
+genes[3,1]=jaccard(expresListtnfa,expresListifng)
+genes[3,2]=jaccard(expresListtnfa, expresListil4)
+genes[3,3]=jaccard(expresListtnfa,expresListtnfa)
+genes[3,4]=jaccard(expresListtnfa,expresListtgfb)
+genes[3,5]=jaccard(expresListtnfa,expresListil1b)
+genes[3,6]=jaccard(expresListtnfa,expresListmalp2)
+genes[3,7]=jaccard(expresListtnfa,expresListcpg)
+
+genes[4,1]=jaccard(expresListtgfb,expresListifng)
+genes[4,2]=jaccard(expresListtgfb, expresListil4)
+genes[4,3]=jaccard(expresListtgfb,expresListtnfa)
+genes[4,4]=jaccard(expresListtgfb,expresListtgfb)
+genes[4,5]=jaccard(expresListtgfb,expresListil1b)
+genes[4,6]=jaccard(expresListtgfb,expresListmalp2)
+genes[4,7]=jaccard(expresListtgfb,expresListcpg)
+                   
+genes[5,1]=jaccard(expresListil1b,expresListifng)
+genes[5,2]=jaccard(expresListil1b, expresListil4)
+genes[5,3]=jaccard(expresListil1b,expresListtnfa)
+genes[5,4]=jaccard(expresListil1b,expresListtgfb)
+genes[5,5]=jaccard(expresListil1b,expresListil1b)
+genes[5,6]=jaccard(expresListil1b,expresListmalp2)
+genes[5,7]=jaccard(expresListil1b,expresListcpg)
+
+genes[6,1]=jaccard(expresListmalp2,expresListifng)
+genes[6,2]=jaccard(expresListmalp2, expresListil4)
+genes[6,3]=jaccard(expresListmalp2,expresListtnfa)
+genes[6,4]=jaccard(expresListmalp2,expresListtgfb)
+genes[6,5]=jaccard(expresListmalp2,expresListil1b)
+genes[6,6]=jaccard(expresListmalp2,expresListmalp2)
+genes[6,7]=jaccard(expresListmalp2,expresListcpg)
+
+genes[7,1]=jaccard(expresListcpg,expresListifng)
+genes[7,2]=jaccard(expresListcpg,expresListil4)
+genes[7,3]=jaccard(expresListcpg,expresListtnfa)
+genes[7,4]=jaccard(expresListcpg,expresListtgfb)
+genes[7,5]=jaccard(expresListcpg,expresListil1b)
+genes[7,6]=jaccard(expresListcpg,expresListmalp2)
+genes[7,7]=jaccard(expresListcpg,expresListcpg)
+
+#clustering
 library(proxyC)
+genes<-as.matrix(genes)
+d<-dist(genes)
 
+hgen<-hclust(d, method="complete")
+plot(hgen)
 
-simitable=simil(marina, method =c("jaccard"))
-distanttable=dist(marina)
+#data.frame 
+expresListifng=as.data.frame(expresListifng)
+expresListil4=as.data.frame(expresListil4)
+expresListtnfa=as.data.frame(expresListtnfa)
+expresListtgfb=as.data.frame(expresListtgfb)
+expresListmalp2=as.data.frame(expresListmalp2)
+expresListcpg=as.data.frame(expresListcpg)
+expresListil1b=as.data.frame(expresListil1b)
 
+#prints 
+WriteXLS::WriteXLS(expresListifng,"ifng.xlsx")
+WriteXLS::WriteXLS(expresListil4,"il4.xlsx")
+WriteXLS::WriteXLS(expresListtnfa,"tnfa.xlsx")
+WriteXLS::WriteXLS(expresListtgfb,"tgfb.xlsx")
+WriteXLS::WriteXLS(expresListil1b,"il1b.xlsx")
+WriteXLS::WriteXLS(expresListmalp2,"malp2.xlsx")
+WriteXLS::WriteXLS(expresListcpg,"cpg.xlsx")
 
-plotdi<-hclust(as.dist(distanttable))
-plot(plotdi)
-
-
-plotd1<-hclust(as.dist(distanttable), method = "average", members = NULL)
-plot(plotd1)
-plotd2<-hclust(as.dist(distanttable), method = "complete", members = NULL)
-plot(plotd2)
-plotd3<-hclust(as.dist(distanttable), method = "single", members = NULL)
-plot(plotd3)
 
