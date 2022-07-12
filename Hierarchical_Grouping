@@ -1,0 +1,21 @@
+
+#install.packages("proxyC")
+
+
+library(proxyC)
+
+
+simitable=simil(marina, method =c("jaccard"))
+distanttable=dist(marina)
+
+
+plotdi<-hclust(as.dist(distanttable))
+plot(plotdi)
+
+
+plotd1<-hclust(as.dist(distanttable), method = "average", members = NULL)
+plot(plotd1)
+plotd2<-hclust(as.dist(distanttable), method = "complete", members = NULL)
+plot(plotd2)
+plotd3<-hclust(as.dist(distanttable), method = "single", members = NULL)
+plot(plotd3)
