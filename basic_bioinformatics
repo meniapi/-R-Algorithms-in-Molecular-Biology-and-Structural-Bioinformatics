@@ -1,0 +1,50 @@
+library(tictoc)
+
+n=seq(from=1,to=1000000)
+n=matrix(n)
+
+getK_simple <- function(n)
+{
+  k = 0;
+  while(n!=1){
+    if (n%%2 == 0){n = n/2}
+    else {n = 3*n + 1}
+    k = k + 1;
+  }
+  return (k)
+}
+
+getK_fast <- function(n)
+{
+  k = 0;
+  while(n!=1){
+    if (n%%2 == 0){n = n/2}
+    else {n = 3*n + 1}
+    k = k + 1;
+    
+    # Check whether we have already made the computations for this n before
+    if (n<length(allKs) && allKs[n]>0){
+      return (k + allKs[n])
+    }
+  }
+  return (k) 
+}
+#### MAIN PROGRAM ####
+
+tic("Simple program calculations duration")
+allKs_simple = list()
+allKs_simple = sapply(n, getK_simple )
+toc()
+
+tic("Fast program calculations duration")
+allKs = rep(0,length(n))
+for (reps in 1:length(n)){
+  allKs[reps] = getK_fast(n[reps])
+}
+toc()
+allKs_fast = allKs # store the results of the fast calc program
+
+# Ensure that fast program's calculations are correct
+if(setequal(allKs_fast,allKs_simple)){print("Results equal.")}
+
+#print(paste("The number of k for n =",n,"is :",allKs))
