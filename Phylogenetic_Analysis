@@ -1,0 +1,54 @@
+
+# load("~/.RData") egathistw ta paketa poy apaitountai apo tin ekfwnisi
+# install.packages("seqinr")
+# if (!requireNamespace("BiocManager", quietly = TRUE))
+# install.packages("BiocManager")
+# BiocManager::install("Biostrings")
+library(Biostrings) 
+library(seqinr)
+sequences <-read.fasta("histone4.fa") 
+# read fasta
+seqnames<-c("human","mouse","drome","arath","bovin","caeel","chick",
+            "rat","yeast","xenla") 
+myseqs<-list()  
+  for (i in 1:length(sequences)){  
+    myseqs[i]<-toupper(paste(sequences[[i]],collapse=""))
+  }  
+names(myseqs)<-seqnames 
+marina<-matrix(nrow=length(myseqs), ncol=length(myseqs))
+
+for(i in 1:length(myseqs)) 
+{
+  for(j in 1:length(myseqs)) 
+    {
+    s1=toString(myseqs[i]) 
+    s2=toString(myseqs[j])
+   
+     marina[i,j]=score(pairwiseAlignment(s1,s2,substitutionMatrix="BLOSUM50",
+                                         type="global"))
+} #find score
+} 
+write.csv(marina,"marina.csv",row.names = FALSE)
+
+
+
+#erwtima2
+myseqs=toString(myseqs)
+rndm=sample(myseqs,size=103,replace = TRUE)
+
+
+#erwtima3
+
+mrn<-matrix(nrow=length(myseqs)+1, ncol=length(myseqs)+1)
+
+for(i in 1:length(myseqs))
+  
+{
+    s1=toString(myseqs[i])
+    mrn[i,i +1]=score(pairwiseAlignment(rndm,s1,substitutionMatrix="BLOSUM50",
+                                        type="global"))
+    }
+
+
+
+
