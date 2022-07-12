@@ -1,0 +1,146 @@
+gene_exp <- read.table("./GeneExpressionDataset_normalized.tsv")
+
+# A) ANOVA
+#Prepare data for anova
+dataANOVA <- data.frame(t(gene_exp))[2:61, 2:18704]
+row.names(dataANOVA) <- gene_exp[1, 2:61]
+colnames(dataANOVA) <- gene_exp[2:18704, 1]
+dataANOVA$Condition <- ""
+dataANOVA$Condition[1:10] <- "WT"
+dataANOVA$Condition[11:20] <- "TG"
+dataANOVA$Condition[21:30] <- "TherA"
+dataANOVA$Condition[31:40] <- "TherB"
+dataANOVA$Condition[41:50] <- "TherC"
+dataANOVA$Condition[51:60] <- "TherD"
+dataANOVA$Condition <- as.factor(dataANOVA$Condition)
+dataANOVA[1:18703] <- as.numeric(unlist(dataANOVA[, 1:18703]))
+
+calcLen = 18703
+#18703
+
+# Apply anova to dataANOVA
+fits = list()
+results = list()
+# positions of diff and pvals of the 5 wanted conditions
+positionOfConditions <- c(5, 50, 9, 54, 12, 57, 14, 59, 15, 60)
+nameOfConditions <-
+  c("TG-WT", "TherA-WT", "TherB-WT", "TherC-WT", "TherD-WT")
+for (i in seq(1, calcLen)) {
+  fits[[i]] <- aov(dataANOVA[, i] ~ Condition, dataANOVA)
+  tempResult <- TukeyHSD(fits[[i]])
+  tempResult <-
+    data.frame(t(matrix(tempResult[[1]][positionOfConditions], nrow = 2)))
+  tempResult[, 1] = -tempResult[, 1] # reversing the order of the conditions
+  rownames(tempResult) <- nameOfConditions
+  colnames(tempResult) <- c("diff", "p adj")
+  # After having kept only the wanted values (and converted them into a data.frame), store the result of the anova
+  results[[i]] <- tempResult
+  cat("Progress: ",(i/calcLen)*100,"/100 \r",sep = "")
+}
+
+# Extract the differentially expressed genes by the wanted conditions
+DEG <- list()
+DEGindexes <- list()
+for (i in seq(1, calcLen)) {
+  # Check if the gene is expressed for all conditions, store it only once
+  for (j in seq(1, 5)) {
+    if (abs(results[[i]][j, 1]) <= 1 && results[[i]][j, 2] <= 0.05) {
+      # for each DEG, we store its name
+      DEG <- append(DEG, colnames(dataANOVA)[i])
+      # and its index in results
+      DEGindexes <- append(DEGindexes, i)
+      break
+    }
+  }
+}
+
+# B) Heatmap
+# For each gene in DEG, get the diff values
+dataHeat <- data.frame()
+for (i in seq(1, length(DEG))) {
+  diffs <- results[[DEGindexes[[i]]]][, 1]
+  dataHeat <- rbind(dataHeat, diffs)
+}
+rownames(dataHeat) <- colnames(dataANOVA)[unlist(DEGindexes)]
+colnames(dataHeat) <- nameOfConditions
+
+
+dataHeatMatrix <- matrix(unlist(dataHeat), ncol = 5)
+hmp <-
+  heatmap(dataHeatMatrix,
+          labCol = nameOfConditions,
+          labRow = rownames(dataHeat))
+
+# C) k-means clustering
+k <- 5
+clusts <- kmeans(dataHeat, centers = k)
+# Visualize, maybe
+library(factoextra)
+fviz_cluster(clusts, dataHeat)
+
+# Get genes in each cluster
+clustIndexes <- clusts$cluster
+ClustersByGeneName <- list()
+# Initialize list of lists
+for (l in seq(1, k)) {
+  listName = paste("Genes in Cluster ", l)
+  ClustersByGeneName[[listName]] <- list()
+}
+
+for (i in seq(1, length(DEG))) {
+  ClustersByGeneName[[clustIndexes[i]]] <-
+    append(ClustersByGeneName[[clustIndexes[i]]], DEG[[i]])
+}
+
+# D) Function Analysis
+library(kableExtra)
+library(gProfileR)
+SIFuncs <- list()
+for (i in seq(1, k)) {
+  funcs <-
+    gprofiler(
+      query = as.character(ClustersByGeneName[[i]]),
+      organism = "mmusculus",
+      src_filter = c("GO:BP", "KEGG")
+    )
+  if (dim(funcs)[1] == 0) {
+    SIFuncs[[i]] <- data.frame()
+  }
+  else{
+    SItermsOfFunc <- data.frame()
+    for (j in seq(1, dim(funcs)[1])) {
+      if (funcs$term.size[j]>=30 && funcs$term.size[j]<=300 && funcs$p.value[j]<=0.01){
+        SItermsOfFunc <- rbind(SItermsOfFunc,c(funcs$term.name[j],funcs$p.value[j]))
+      }
+    }
+    if (dim(SItermsOfFunc)[1]>0){
+      colnames(SItermsOfFunc) <- c("term.name","p.value")
+      # Sort dataframe as well
+      SItermsOfFunc[,2] <- as.numeric(SItermsOfFunc[,2])
+      SItermsOfFunc <- SItermsOfFunc[order(SItermsOfFunc$p.value),]
+    }
+    SIFuncs[[i]] <- SItermsOfFunc
+  }
+  # Visualize data as table
+  print(kable(SIFuncs[[i]],row.names = FALSE,format = "simple",caption = paste("Functionalities for cluster ",i)))
+}
+
+# E) Random Forest
+# Prepare data for the random forest function
+dataRF <- dataANOVA[,unlist(DEGindexes)]
+# Using the actual gene names in randomForest() prompts an error sometimes
+for (i in seq(1,dim(dataRF)[2])){
+  colnames(dataRF)[i] <- paste("Gene",DEGindexes[[i]],sep = "")
+}
+dataRF$State <- dataANOVA$Condition
+library(randomForest)
+modelRF <- randomForest(State~.,data=dataRF,ntree=500,mtry=5)
+ConfusionMatrix <- modelRF$confusion
+
+# F) Features
+library(caret)
+features <- varImp(modelRF)
+top20Indexes <- order(features[,1],decreasing = TRUE)[1:20]
+top20Genes <- rownames(features)[top20Indexes]
+top20Genes <- sort(as.numeric(sub("Gene","",top20Genes,fixed=TRUE)))
+top20Genes <- colnames(dataANOVA)[top20Genes]
